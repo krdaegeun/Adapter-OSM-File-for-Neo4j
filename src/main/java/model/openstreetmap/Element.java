@@ -1,17 +1,29 @@
 package model.openstreetmap;
 
+import model.Coordinate;
+
 import java.util.ArrayList;
 
 public class Element {
 
-    Long id;
-    Boolean visible;
+    long id;
+    boolean visible;
     short version;
     long changeset;
     String timestamp;
     String user;
-    Long uid;
+    long uid;
     ArrayList<Tag> tags;
+
+    public Element(long id, boolean visible, short version, long changeset, String timestamp, String user, long uid){
+        this.id = id;
+        this.visible = visible;
+        this.version = version;
+        this.changeset = changeset;
+        this.timestamp = timestamp;
+        this.user = user;
+        this.uid = uid;
+    }
 
     public long getId(){
         return id;
@@ -42,9 +54,14 @@ public class Element {
     }
 
     public boolean attachTag(Tag tag){
+        if (tags == null){
+            tags = new ArrayList<>();
+        }
+
         return tags.add(tag);
     }
     public ArrayList<Tag> getTags() {
         return tags;
     }
+
 }

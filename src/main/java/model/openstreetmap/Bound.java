@@ -1,10 +1,11 @@
 package model.openstreetmap;
 
 public class Bound {
-    private double minLatitude = 500;
-    private double minLongitude = 500;
-    private double maxLatitude = 500;
-    private double maxLongitude = 500;
+    private final double DEFAULT_VALUE = 500;
+    private double minLatitude = DEFAULT_VALUE;
+    private double minLongitude = DEFAULT_VALUE;
+    private double maxLatitude = DEFAULT_VALUE;
+    private double maxLongitude = DEFAULT_VALUE;
 
     Bound(double minLatitude, double minLongitude, double maxLatitude, double maxLongitude){
         this.minLatitude = minLatitude;

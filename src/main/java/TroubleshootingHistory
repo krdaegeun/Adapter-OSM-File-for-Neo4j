@@ -1,0 +1,124 @@
+Troubleshooting history
+
+1. Exception in thread "main" java.lang.ClassCastException: model.openstreetmap.Element cannot be cast to model.openstreetmap.Node
+   	at util.OSMHandler.buildNode(OSMHandler.java:145)
+   	at util.OSMHandler.startElement(OSMHandler.java:33)
+
+클래스 캐스트 익셉션 발생
+
+코드
+
+else if (qName.equals("node")){
+    Node node = buildNode(attributes);
+    nodes.add(node);
+    setCurrentElement(node);
+}
+
+private Node buildNode(Attributes attributes){
+    Node node = (Node) buildElement(attributes);
+    node.setCoordinate(new Coordinate(SaxHelper.asDouble(attributes, "lat"), SaxHelper.asDouble(attributes, "lon")));
+    return node;
+}
+
+private Element buildElement(Attributes attributes){
+        long id = SaxHelper.asLong(attributes, "id");;
+        boolean visible = SaxHelper.asBoolean(attributes, "visible");;
+        short version = SaxHelper.asShort(attributes, "version");;
+        long changeset = SaxHelper.asLong(attributes, "changeset");;
+        String timestamp = SaxHelper.asString(attributes, "timestamp");;
+        String user = SaxHelper.asString(attributes, "user");;
+        long uid = SaxHelper.asLong(attributes, "uid");;
+        return new Element(id, visible, version, changeset, timestamp, user, uid);
+    }
+
+1. 해결 시도
+Element 클래스를 Node가 상속받았다.
+상위 클래스에서 하위 클래스 인스턴스로 캐스트가 불가능하다.
+
+다운캐스팅
+-> Parent parent = new Child(); 가능
+-> Child child = new Parent(); 불가능
+-> 왜?
+-> Child 클래스는 Parent 클래스를 상속받았기 때문에 Parent 클래스 보다는 Child 클래스가 더욱 많은 데이터를 가졌다.
+-> Child의 데이터를 가지지 않기 때문에 컴파일 오류 발생
+-> Child child = (Child) new Parent(); 컴파일은 가능, 런타임익셉션 발생
+-> JVM은 new Parent(); 인스턴스를 Child 데이터로 형변환 하려 했지만, Child 데이터가 무엇인지 모르기 때문이다.
+-> Parent parent = new Child(); Child child = (Child) Parent 다운캐스팅 성공
+-> 왜? 업캐스팅이 선행되어 다운캐스팅이 될때도 문제없다.
+
+해결 방법
+-> buildElement 메서드에 타입을 같이 넣어서 if 문으로 타입에 맞게 생성해서 올려준다.
+-> if 문으로 분기를 나누었을때가 나을까 각 메서드를 생성해서 만드는게 나을까
+-> 우선은 기본 생성자로 생성하는 패턴이라 메서드를 생성하게 되면 변수에 attributes에서 가져오는 코드가 중복되어야 하니 if 문으로 나누기로 한다.
+
+if (type == ElementType.NODE){
+    return new Node(id, visible, version, changeset, timestamp, user, uid);
+} else if (type == ElementType.WAY){
+    return new Way(id, visible, version, changeset, timestamp, user, uid);
+} else if (type == ElementType.RELATION){
+    return new Relation(id, visible, version, changeset, timestamp, user, uid);
+}
+    return null;
+}
+
+-> 해결됨
+
+2. NullPointerException
+
+if(nullCheckCurrentElement()){
+    currentElement.attachTag(tag);
+} else {
+    throw new RuntimeException("Current Element is not determined");
+}
+
+public boolean attachTag(Tag tag){
+    return tags.add(tag);
+}
+
+1. 해결 시도
+- currentElement에 Tag를 다는 간단한 작업이다.
+- currentElement의 nullcheck를 했지만
+- attachTag에서 tag의 nullcheck를 하지 않았다.
+
+해결방법
+- tag의 nullcheck 메서드 추가
+- if문의 분기도 변경했는데, tag가 먼저 존재해야 currentelement를 체크하는게 맞다.
+- 이전 분기에서 태그를 찾아 들어온것이기 때문에 null이면 안되고 따라서 exception을 던져야 한다.
+
+if(nullCheckTag(tag)){
+    if(nullCheckCurrentElement()){
+        currentElement.attachTag(tag);
+    } else {
+        throw new RuntimeException("Current Element is not determined");
+    }
+} else{
+    throw new RuntimeException("Tag is not builded");
+}
+
+2. 해결 시도
+- nullCheck를 하는것을 적었지만 사실 태그는 null이면 안된다.
+
+private Tag buildTag(Attributes attributes){
+    return new Tag(SaxHelper.asString(attributes, "k"), SaxHelper.asString(attributes, "v"));
+}
+
+- buildtag에 문제가 있다.
+- 디버그를 하였고 buildtag에는 문제가 없음을 확인했다.
+- null은 tag가 아니라 node의 arrayList tags 있었다.
+- 초기화를 해주지 않았다.
+
+해결방법
+
+public boolean attachTag(Tag tag){
+    if (tags == null){
+        tags = new ArrayList<>();
+    }
+
+    return tags.add(tag);
+}
+
+- tag가 존재 안할때도 있기 때문에
+- tag가 필요할때, 존재하지 않을경우 초기화하였다.
+
+-> 해결완료
+
